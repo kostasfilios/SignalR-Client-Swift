@@ -27,7 +27,7 @@ public class LongPollingTransport: Transport {
         self.logger = logger
     }
     
-    public func start(url: URL, options: HttpConnectionOptions) {
+    public func start(url: URL, options: HttpConnectionOptions, config: URLSessionConfiguration) {
         logger.log(logLevel: .info, message: "Starting LongPolling transport")
         httpClient = options.httpClientFactory(options)
         self.url = url

@@ -14,6 +14,7 @@ public class HttpConnection: Connection {
 
     private var url: URL
     private let options: HttpConnectionOptions
+    private let config: URLSessionConfiguration
     private let transportFactory: TransportFactory
     private let logger: Logger
 
@@ -40,7 +41,7 @@ public class HttpConnection: Connection {
         self.init(url: url, options: options, transportFactory: DefaultTransportFactory(logger: logger), logger: logger)
     }
 
-    init(url: URL, options: HttpConnectionOptions, transportFactory: TransportFactory, logger: Logger) {
+    init(url: URL, options: HttpConnectionOptions, transportFactory: TransportFactory, logger: Logger, config: URLSessionConfiguration? = nil) {
         logger.log(logLevel: .debug, message: "HttpConnection init")
         connectionQueue = DispatchQueue(label: "SignalR.connection.queue")
         startDispatchGroup = DispatchGroup()
@@ -49,6 +50,7 @@ public class HttpConnection: Connection {
         self.options = options
         self.transportFactory = transportFactory
         self.logger = logger
+        self.config = config ?? .default
         self.state = .initial
     }
 
@@ -70,7 +72,7 @@ public class HttpConnection: Connection {
 
         if options.skipNegotiation {
             transport = try! self.transportFactory.createTransport(availableTransports: [TransportDescription(transportType: TransportType.webSockets, transferFormats: [TransferFormat.text, TransferFormat.binary])])
-            startTransport(connectionId: nil, connectionToken: nil)
+            startTransport(connectionId: nil, connectionToken: nil, config: config)
         } else {
             negotiate(negotiateUrl: createNegotiateUrl(), accessToken: nil) { negotiationResponse in
                 do {
@@ -81,7 +83,7 @@ public class HttpConnection: Connection {
                     return
                 }
 
-                self.startTransport(connectionId: negotiationResponse.connectionId, connectionToken: negotiationResponse.connectionToken)
+                self.startTransport(connectionId: negotiationResponse.connectionId, connectionToken: negotiationResponse.connectionToken, config: self.config)
             }
         }
     }
@@ -137,7 +139,7 @@ public class HttpConnection: Connection {
         }
     }
 
-    private func startTransport(connectionId: String?, connectionToken: String?) {
+    private func startTransport(connectionId: String?, connectionToken: String?, config: URLSessionConfiguration) {
         // connection is being stopped even though start has not finished yet
         if (self.state != .connecting) {
             self.logger.log(logLevel: .info, message: "Connection closed during negotiate")
@@ -148,7 +150,7 @@ public class HttpConnection: Connection {
         let startUrl = self.createStartUrl(connectionId: connectionToken ?? connectionId)
         self.transportDelegate = ConnectionTransportDelegate(connection: self, connectionId: connectionId)
         self.transport!.delegate = self.transportDelegate
-        self.transport!.start(url: startUrl, options: self.options)
+        self.transport!.start(url: startUrl, options: self.options, config: config)
     }
 
     private func createNegotiateUrl() -> URL {

@@ -25,7 +25,7 @@ public class WebsocketsTransport: NSObject, Transport, URLSessionWebSocketDelega
         self.logger = logger
     }
 
-    public func start(url: URL, options: HttpConnectionOptions) {
+    public func start(url: URL, options: HttpConnectionOptions, config: URLSessionConfiguration = .default) {
         logger.log(logLevel: .info, message: "Starting WebSocket transport")
 
         authenticationChallengeHandler = options.authenticationChallengeHandler
@@ -33,7 +33,7 @@ public class WebsocketsTransport: NSObject, Transport, URLSessionWebSocketDelega
         var request = URLRequest(url: convertUrl(url: url))
         populateHeaders(headers: options.headers, request: &request)
         setAccessToken(accessTokenProvider: options.accessTokenProvider, request: &request)
-        urlSession = URLSession(configuration: .default, delegate: self, delegateQueue: OperationQueue())
+        urlSession = URLSession(configuration: config, delegate: self, delegateQueue: OperationQueue())
         webSocketTask = urlSession!.webSocketTask(with: request)
         if let maximumWebsocketMessageSize = options.maximumWebsocketMessageSize {
             webSocketTask?.maximumMessageSize = maximumWebsocketMessageSize
