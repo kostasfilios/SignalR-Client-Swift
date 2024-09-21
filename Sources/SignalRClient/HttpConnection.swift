@@ -72,12 +72,13 @@ public class HttpConnection: Connection {
             transport = try! self.transportFactory.createTransport(availableTransports: [TransportDescription(transportType: TransportType.webSockets, transferFormats: [TransferFormat.text, TransferFormat.binary])])
             startTransport(connectionId: nil, connectionToken: nil)
         } else {
-            negotiate(negotiateUrl: createNegotiateUrl(), accessToken: nil) { negotiationResponse in
+            negotiate(negotiateUrl: createNegotiateUrl(), accessToken: nil) { [weak self] negotiationResponse in
+                guard let self else { return }
                 do {
-                    self.transport = try self.transportFactory.createTransport(availableTransports: negotiationResponse.availableTransports)
+                    transport = try self.transportFactory.createTransport(availableTransports: negotiationResponse.availableTransports)
                 } catch {
-                    self.logger.log(logLevel: .error, message: "Creating transport failed: \(error)")
-                    self.failOpenWithError(error: error, changeState: true)
+                    logger.log(logLevel: .error, message: "Creating transport failed: \(error)")
+                    failOpenWithError(error: error, changeState: true)
                     return
                 }
 
